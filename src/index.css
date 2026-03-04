@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  /* Fundo profissional: azul marinho muito escuro para destacar o neon */
+  background: #05070a !important; 
+  color: white;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Efeito de brilho nas bolhas (Glow) */
+.bubble-glow-blue { box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); border: 1px solid rgba(56, 189, 248, 0.5); }
+.bubble-glow-purple { box-shadow: 0 0 20px rgba(129, 140, 248, 0.4); border: 1px solid rgba(129, 140, 248, 0.5); }
+
+/* Estilos globais para links e botões resetados */
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; }
+
+/* Scrollbar personalizada (opcional, mas fica lindo no modo escuro) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05); /* Branco bem transparente */
+  backdrop-filter: blur(15px); /* Efeito de desfoque no fundo */
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  color: white;
+}
+
+.login-input {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
+.login-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
