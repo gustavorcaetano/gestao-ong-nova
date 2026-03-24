@@ -14,7 +14,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // 1. CRIAMOS O ESTADO PARA A NOTIFICAÇÃO
+  // 1. ESTADO PARA A NOTIFICAÇÃO
   const [notify, setNotify] = useState({ show: false, message: '', type: '' });
 
   // Função para disparar o pop-up
@@ -30,13 +30,16 @@ const Login = () => {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        // Exibe sucesso antes de navegar (opcional, mas você pediu)
         triggerNotify("Login realizado! Entrando...", "success");
+        // Navega para o Dashboard Administrativo
         setTimeout(() => navigate('/admin'), 1500);
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Criando o perfil da ONG no banco de dados
         await setDoc(doc(db, "ongs", userCredential.user.uid), {
           email: email,
+          tipoPerfil: 'admin',
           criadoEm: new Date()
         });
 
@@ -49,12 +52,13 @@ const Login = () => {
       if (err.code === 'auth/weak-password') msg = "A senha deve ter no mínimo 6 caracteres.";
       else if (err.code === 'auth/email-already-in-use') msg = "Este e-mail já está em uso.";
       else if (err.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
+      else if (err.code === 'auth/user-not-found') msg = "E-mail não cadastrado.";
       
       triggerNotify(msg, "error");
     }
   };
 
-  // 2. O COMPONENTE DE NOTIFICAÇÃO (Subindo para dentro do escopo ou usando renderização condicional)
+  // 2. COMPONENTE DE NOTIFICAÇÃO
   const renderNotification = () => {
     if (!notify.show) return null;
     return (
@@ -80,7 +84,6 @@ const Login = () => {
   return (
     <div style={{ background: '#05070a', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* 3. CHAMAMOS A NOTIFICAÇÃO AQUI */}
       {renderNotification()}
 
       <div style={{ padding: '30px 8%' }}>
@@ -141,7 +144,6 @@ const Login = () => {
         </Card>
       </Container>
 
-      {/* Estilos da Animação */}
       <style>{`
         @keyframes slideIn {
           from { transform: translateX(100%); opacity: 0; }
