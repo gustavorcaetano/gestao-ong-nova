@@ -26,8 +26,8 @@ require_once $rootPath . '/autoload.php'; // Arquivo do Autoloader de classes
 $router = new Router();
 // se uri estiver vazia considera chamar a rota de home
 
-$module = ( ( $_GET["uri"] == "") || str_starts_with($_GET["uri"] ,"index.php" ) || ! isset($_GET["uri"]) ? "home" : $_GET["uri"] );
-
+// $module = ( ( $_GET["uri"] == "") || str_starts_with($_GET["uri"] ,"index.php" ) || ! isset($_GET["uri"]) ? "home" : $_GET["uri"] );
+$module = (!isset($_GET["uri"]) || $_GET["uri"] == "" || str_starts_with($_GET["uri"], "index.php")) ? "home" : $_GET["uri"];
 $router->dispatch( $module );
 
 /**
