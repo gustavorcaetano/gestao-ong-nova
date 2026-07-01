@@ -28,20 +28,37 @@ const Doacao = () => {
     
     try {
       const doacaoDados = {
-        ...formData,
         nome: anonimo ? "Anônimo" : formData.nome,
-        data: new Date(),
+        email: anonimo ? "anonimo@ong.com" : formData.email,
+        valor: formData.valor,
+        metodo: formData.metodo,
         status: "Pendente"
       };
 
-      // Salva no Firebase
-      await addDoc(collection(db, "doacoes"), doacaoDados);
+      // Chamada AJAX enviando os dados diretamente para o back-end em PHP do professor
+      const response = await fetch('/index.php?uri=salvarDoacao', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(doacaoDados)
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro na resposta do servidor PHP');
+      }
+
+      const resultado = await response.json();
       
-      // Abre o modal com as instruções de pagamento
-      setShowModal(true);
+      if (resultado.status === "sucesso") {
+        setShowModal(true);
+      } else {
+        alert("Erro: " + resultado.mensagem);
+      }
+
     } catch (error) {
-      console.error("Erro ao doar:", error);
-      alert("Erro ao processar doação.");
+      console.error("Erro ao doar para o PHP:", error);
+      alert("Erro ao processar doação no banco de dados.");
     } finally {
       setLoading(false);
     }
