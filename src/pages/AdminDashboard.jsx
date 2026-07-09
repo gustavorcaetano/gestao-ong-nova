@@ -48,36 +48,25 @@ const AdminDashboard = () => {
   useEffect(() => {
     setLoading(true);
     
-    // 1. BUSCA FAMÍLIAS DO MYSQL (Substituindo o Firebase por Axios)
+    // 1. BUSCA FAMÍLIAS DO MYSQL
     const carregarFamilias = api.get('/admin/familias')
-      .then((response) => {
-        setFamilias(response.data);
-      })
-      .catch((error) => {
-        console.error("Erro ao buscar famílias do MySQL:", error);
-      });
+      .then((response) => setFamilias(response.data))
+      .catch((error) => console.error("Erro ao buscar famílias:", error));
 
-    // 2. Escuta Solicitações (Mantido temporariamente no Firebase)
-    const qSol = query(collection(db, "solicitacoes"), orderBy("data", "desc"));
-    const unsubSol = onSnapshot(qSol, (snap) => {
-      setSolicitacoes(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-    });
+    // 2. BUSCA SOLICITAÇÕES DO MYSQL (Substituindo o Firebase por Axios)
+    const carregarSolicitacoes = api.get('/admin/solicitacoes')
+      .then((response) => setSolicitacoes(response.data))
+      .catch((error) => console.error("Erro ao buscar solicitações:", error));
 
-    // 3. BUSCA DOAÇÕES DO MYSQL (Já configurado antes)
+    // 3. BUSCA DOAÇÕES DO MYSQL
     const carregarDoacoes = api.get('/admin/doacoes')
-      .then((response) => {
-        setDoacoes(response.data);
-      })
-      .catch((error) => {
-        console.error("Erro ao buscar doações do MySQL:", error);
-      });
+      .then((response) => setDoacoes(response.data))
+      .catch((error) => console.error("Erro ao buscar doações:", error));
 
-    // Espera as duas chamadas do MySQL terminarem para tirar o carregando da tela
-    Promise.all([carregarFamilias, carregarDoacoes]).finally(() => {
+    // Espera todas as chamadas do MySQL terminarem
+    Promise.all([carregarFamilias, carregarSolicitacoes, carregarDoacoes]).finally(() => {
       setLoading(false);
     });
-
-    return () => { unsubSol(); };
   }, []);
 
   // Lógica de Filtro
@@ -123,15 +112,16 @@ const AdminDashboard = () => {
 
   const handleStatusUpdate = async (coll, id, novoStatus) => {
     try {
-      // Se for a tabela de doações, usamos o Axios para mandar pro Node/MySQL
       if (coll === 'doacoes') {
         await api.put(`/admin/doacoes/${id}`, { status: novoStatus });
         showNotification("Status da doação atualizado!", "success");
-        
-        // Atualiza a lista na tela imediatamente para o usuário ver mudar para "Confirmado"
         setDoacoes(prev => prev.map(d => d.id === id ? { ...d, status: novoStatus } : d));
+      } else if (coll === 'solicitacoes') {
+        // ATUALIZA STATUS DA SOLICITAÇÃO NO MYSQL VIA AXIOS
+        await api.put(`/admin/solicitacoes/${id}`, { status: novoStatus });
+        showNotification("Pedido resolvido com sucesso!", "success");
+        setSolicitacoes(prev => prev.map(s => s.id === id ? { ...s, status: novoStatus } : s));
       } else {
-        // Mantém o Firebase temporariamente para as outras tabelas
         await updateDoc(doc(db, coll, id), { status: novoStatus });
         showNotification("Status atualizado!", "success");
       }
@@ -145,14 +135,15 @@ const AdminDashboard = () => {
     if (window.confirm("Confirmar exclusão definitiva?")) {
       try {
         if (coll === 'familias') {
-          // EXCLUI DO MYSQL VIA AXIOS
           await api.delete(`/admin/familias/${id}`);
-          
-          // Remove da tela imediatamente
           setFamilias(prev => prev.filter(f => f.id !== id));
           showNotification("Família removida com sucesso.", "success");
+        } else if (coll === 'solicitacoes') {
+          // EXCLUI A SOLICITAÇÃO DO MYSQL VIA AXIOS
+          await api.delete(`/admin/solicitacoes/${id}`);
+          setSolicitacoes(prev => prev.filter(s => s.id !== id));
+          showNotification("Pedido removido com sucesso.", "success");
         } else {
-          // Mantém o Firebase para as outras coleções por enquanto
           await deleteDoc(doc(db, coll, id));
           showNotification("Removido com sucesso.", "success");
         }
@@ -269,7 +260,7 @@ const AdminDashboard = () => {
                         <div>
                           <h5 style={{ color: styles.accent, fontWeight: 'bold' }}>{s.nomeFamilia}</h5>
                           <p style={{ color: styles.textSecondary, fontStyle: 'italic' }}>"{s.mensagem}"</p>
-                          <small style={{ color: '#64748b' }}>Recebido em: {s.data?.toDate().toLocaleDateString()}</small>
+                          <small style={{ color: '#64748b' }}>Recebido em: {new Date(s.data).toLocaleDateString('pt-BR')}</small>
                         </div>
                         <div className="d-flex gap-2">
                           <Badge bg={s.status === 'Pendente' ? 'warning' : 'success'} className="p-2 mb-2">{s.status}</Badge>

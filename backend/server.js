@@ -139,6 +139,50 @@ app.delete('/api/admin/familias/:id', (req, res) => {
   });
 });
 
+// 1. Rota para LISTAR todos os pedidos (Solicitações) no MySQL
+app.get('/api/admin/solicitacoes', (req, res) => {
+  const query = 'SELECT * FROM solicitacoes ORDER BY data DESC';
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar solicitações no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao buscar solicitações do banco" });
+    }
+    res.json(results);
+  });
+});
+
+// 2. Rota para ATUALIZAR o status de um pedido para 'Resolvido'
+app.put('/api/admin/solicitacoes/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const query = 'UPDATE solicitacoes SET status = ? WHERE id = ?';
+  
+  db.query(query, [status, id], (err, result) => {
+    if (err) {
+      console.error("Erro ao atualizar status da solicitação no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao atualizar status no banco" });
+    }
+    res.json({ mensagem: "Status da solicitação atualizado com sucesso!" });
+  });
+});
+
+// 3. Rota para EXCLUIR um pedido no MySQL
+app.delete('/api/admin/solicitacoes/:id', (req, res) => {
+  const { id } = req.params;
+
+  const query = 'DELETE FROM solicitacoes WHERE id = ?';
+  
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      console.error("Erro ao excluir solicitação no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao excluir solicitação no banco" });
+    }
+    res.json({ mensagem: "Solicitação removida com sucesso!" });
+  });
+});
+
 // 🏃‍♂️ 3. Ligando o Servidor Node
 const PORT = 3001; 
 app.listen(PORT, () => {
