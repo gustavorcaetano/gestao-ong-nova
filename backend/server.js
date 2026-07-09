@@ -79,6 +79,66 @@ app.put('/api/admin/doacoes/:id', (req, res) => {
   });
 });
 
+// Rota para o AdminDashboard LISTAR todas as famílias salvas no MySQL
+app.get('/api/admin/familias', (req, res) => {
+  const query = 'SELECT * FROM familias ORDER BY nome ASC';
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar famílias no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao buscar dados do banco" });
+    }
+    res.json(results); // Envia a lista de famílias para o React
+  });
+});
+
+// Rota para CADASTRAR uma nova família no MySQL
+app.post('/api/admin/familias', (req, res) => {
+  const { nome, dependentes, renda, totalEntregas } = req.body;
+
+  const query = 'INSERT INTO familias (nome, dependentes, renda, totalEntregas) VALUES (?, ?, ?, ?)';
+  
+  db.query(query, [nome, dependentes, renda, totalEntregas], (err, result) => {
+    if (err) {
+      console.error("Erro ao inserir família no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao salvar família no banco" });
+    }
+    // Retorna o ID gerado junto com os dados inseridos
+    res.status(201).json({ id: result.insertId, nome, dependentes, renda, totalEntregas });
+  });
+});
+
+// Rota para EDITAR uma família no MySQL
+app.put('/api/admin/familias/:id', (req, res) => {
+  const { id } = req.params;
+  const { nome, dependentes, renda, totalEntregas } = req.body;
+
+  const query = 'UPDATE familias SET nome = ?, dependentes = ?, renda = ?, totalEntregas = ? WHERE id = ?';
+  
+  db.query(query, [nome, dependentes, renda, totalEntregas, id], (err, result) => {
+    if (err) {
+      console.error("Erro ao atualizar família no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao atualizar família no banco" });
+    }
+    res.json({ id: Number(id), nome, dependentes, renda, totalEntregas });
+  });
+});
+
+// Rota para EXCLUIR uma família no MySQL
+app.delete('/api/admin/familias/:id', (req, res) => {
+  const { id } = req.params;
+
+  const query = 'DELETE FROM familias WHERE id = ?';
+  
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      console.error("Erro ao excluir família no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao excluir família no banco" });
+    }
+    res.json({ mensagem: "Família removida com sucesso!" });
+  });
+});
+
 // 🏃‍♂️ 3. Ligando o Servidor Node
 const PORT = 3001; 
 app.listen(PORT, () => {

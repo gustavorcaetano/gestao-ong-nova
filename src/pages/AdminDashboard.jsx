@@ -48,31 +48,36 @@ const AdminDashboard = () => {
   useEffect(() => {
     setLoading(true);
     
-    // 1. Escuta Famílias (Mantido temporariamente)
-    const qFam = query(collection(db, "familias"));
-    const unsubFam = onSnapshot(qFam, (snap) => {
-      setFamilias(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-    });
+    // 1. BUSCA FAMÍLIAS DO MYSQL (Substituindo o Firebase por Axios)
+    const carregarFamilias = api.get('/admin/familias')
+      .then((response) => {
+        setFamilias(response.data);
+      })
+      .catch((error) => {
+        console.error("Erro ao buscar famílias do MySQL:", error);
+      });
 
-    // 2. Escuta Solicitações (Mantido temporariamente)
+    // 2. Escuta Solicitações (Mantido temporariamente no Firebase)
     const qSol = query(collection(db, "solicitacoes"), orderBy("data", "desc"));
     const unsubSol = onSnapshot(qSol, (snap) => {
       setSolicitacoes(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
 
-    // 3. BUSCA DOAÇÕES DO MYSQL (Substituindo o Firebase por Axios)
-    api.get('/admin/doacoes')
+    // 3. BUSCA DOAÇÕES DO MYSQL (Já configurado antes)
+    const carregarDoacoes = api.get('/admin/doacoes')
       .then((response) => {
         setDoacoes(response.data);
       })
       .catch((error) => {
         console.error("Erro ao buscar doações do MySQL:", error);
-      })
-      .finally(() => {
-        setLoading(false);
       });
 
-    return () => { unsubFam(); unsubSol(); };
+    // Espera as duas chamadas do MySQL terminarem para tirar o carregando da tela
+    Promise.all([carregarFamilias, carregarDoacoes]).finally(() => {
+      setLoading(false);
+    });
+
+    return () => { unsubSol(); };
   }, []);
 
   // Lógica de Filtro
@@ -90,21 +95,30 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       const dataPayload = {
-        ...form,
+        nome: form.nome,
         dependentes: Number(form.dependentes),
         renda: Number(form.renda),
-        totalEntregas: Number(form.totalEntregas),
-        ultimaAtualizacao: serverTimestamp()
+        totalEntregas: Number(form.totalEntregas)
       };
+
       if (editingId) {
-        await updateDoc(doc(db, "familias", editingId), dataPayload);
-        showNotification("Cadastro atualizado!", "success");
+        // ATUALIZA NO MYSQL VIA AXIOS
+        const response = await api.put(`/admin/familias/${editingId}`, dataPayload);
+        
+        // Atualiza a lista na tela imediatamente
+        setFamilias(prev => prev.map(f => f.id === editingId ? response.data : f));
+        showNotification("Cadastro atualizado com sucesso!", "success");
       } else {
-        await addDoc(collection(db, "familias"), dataPayload);
-        showNotification("Família cadastrada!", "success");
+        // ENVIA OS DADOS PARA O MYSQL VIA AXIOS
+        const response = await api.post('/admin/familias', dataPayload);
+        setFamilias(prev => [...prev, response.data]);
+        showNotification("Família cadastrada com sucesso!", "success");
       }
       setShowModal(false);
-    } catch (err) { showNotification("Erro ao salvar.", "danger"); }
+    } catch (err) { 
+      console.error("Erro ao salvar família:", err);
+      showNotification("Erro ao salvar.", "danger"); 
+    }
   };
 
   const handleStatusUpdate = async (coll, id, novoStatus) => {
@@ -129,8 +143,23 @@ const AdminDashboard = () => {
 
   const handleDelete = async (coll, id) => {
     if (window.confirm("Confirmar exclusão definitiva?")) {
-      await deleteDoc(doc(db, coll, id));
-      showNotification("Removido com sucesso.", "success");
+      try {
+        if (coll === 'familias') {
+          // EXCLUI DO MYSQL VIA AXIOS
+          await api.delete(`/admin/familias/${id}`);
+          
+          // Remove da tela imediatamente
+          setFamilias(prev => prev.filter(f => f.id !== id));
+          showNotification("Família removida com sucesso.", "success");
+        } else {
+          // Mantém o Firebase para as outras coleções por enquanto
+          await deleteDoc(doc(db, coll, id));
+          showNotification("Removido com sucesso.", "success");
+        }
+      } catch (err) {
+        console.error("Erro ao excluir:", err);
+        showNotification("Erro ao remover.", "danger");
+      }
     }
   };
 
