@@ -63,6 +63,22 @@ app.get('/api/admin/doacoes', (req, res) => {
   });
 });
 
+// Rota para ATUALIZAR o status de uma doação para 'Confirmado'
+app.put('/api/admin/doacoes/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const query = 'UPDATE doacoes SET status = ? WHERE id = ?';
+  
+  db.query(query, [status, id], (err, result) => {
+    if (err) {
+      console.error("Erro ao atualizar status no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao atualizar doação no banco" });
+    }
+    res.json({ mensagem: "Status da doação atualizado com sucesso!" });
+  });
+});
+
 // 🏃‍♂️ 3. Ligando o Servidor Node
 const PORT = 3001; 
 app.listen(PORT, () => {

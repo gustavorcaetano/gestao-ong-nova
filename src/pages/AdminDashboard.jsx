@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
+
+// Firebase
 import { db, auth } from '../firebase';
 import { 
   collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, query, orderBy, onSnapshot 
 } from 'firebase/firestore';
 import { signOut } from "firebase/auth";
+
+import api from '../services/api';
 import { Container, Row, Col, Table, Button, Form, Modal, InputGroup, Card, Nav, Badge, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
@@ -44,26 +48,31 @@ const AdminDashboard = () => {
   useEffect(() => {
     setLoading(true);
     
-    // 1. Escuta Famílias
+    // 1. Escuta Famílias (Mantido temporariamente)
     const qFam = query(collection(db, "familias"));
     const unsubFam = onSnapshot(qFam, (snap) => {
       setFamilias(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
 
-    // 2. Escuta Solicitações
+    // 2. Escuta Solicitações (Mantido temporariamente)
     const qSol = query(collection(db, "solicitacoes"), orderBy("data", "desc"));
     const unsubSol = onSnapshot(qSol, (snap) => {
       setSolicitacoes(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
 
-    // 3. Escuta Doações (Integração nova)
-    const qDoa = query(collection(db, "doacoes"), orderBy("data", "desc"));
-    const unsubDoa = onSnapshot(qDoa, (snap) => {
-      setDoacoes(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      setLoading(false);
-    });
+    // 3. BUSCA DOAÇÕES DO MYSQL (Substituindo o Firebase por Axios)
+    api.get('/admin/doacoes')
+      .then((response) => {
+        setDoacoes(response.data);
+      })
+      .catch((error) => {
+        console.error("Erro ao buscar doações do MySQL:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
-    return () => { unsubFam(); unsubSol(); unsubDoa(); };
+    return () => { unsubFam(); unsubSol(); };
   }, []);
 
   // Lógica de Filtro
@@ -100,9 +109,22 @@ const AdminDashboard = () => {
 
   const handleStatusUpdate = async (coll, id, novoStatus) => {
     try {
-      await updateDoc(doc(db, coll, id), { status: novoStatus });
-      showNotification("Status atualizado!", "success");
-    } catch (err) { showNotification("Erro ao atualizar.", "danger"); }
+      // Se for a tabela de doações, usamos o Axios para mandar pro Node/MySQL
+      if (coll === 'doacoes') {
+        await api.put(`/admin/doacoes/${id}`, { status: novoStatus });
+        showNotification("Status da doação atualizado!", "success");
+        
+        // Atualiza a lista na tela imediatamente para o usuário ver mudar para "Confirmado"
+        setDoacoes(prev => prev.map(d => d.id === id ? { ...d, status: novoStatus } : d));
+      } else {
+        // Mantém o Firebase temporariamente para as outras tabelas
+        await updateDoc(doc(db, coll, id), { status: novoStatus });
+        showNotification("Status atualizado!", "success");
+      }
+    } catch (err) { 
+      console.error("Erro ao atualizar status:", err);
+      showNotification("Erro ao atualizar status.", "danger"); 
+    }
   };
 
   const handleDelete = async (coll, id) => {
@@ -254,7 +276,8 @@ const AdminDashboard = () => {
                         <td className="p-3 fw-bold">{d.nome} <br/><small className="text-muted">{d.email}</small></td>
                         <td className="p-3 fw-bold text-success">R$ {d.valor}</td>
                         <td className="p-3">{d.metodo}</td>
-                        <td className="p-3 text-secondary">{d.data?.toDate().toLocaleDateString()}</td>
+                        {/* Linha abaixo alterada para a exibição da tabela */}
+                        <td className="p-3 text-secondary">{new Date(d.data).toLocaleDateString('pt-BR')}</td>
                         <td className="p-3"><Badge bg={d.status === 'Pendente' ? 'warning' : 'success'}>{d.status}</Badge></td>
                         <td className="p-3 text-center">
                           {d.status === 'Pendente' && (
