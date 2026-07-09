@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Card, Form, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword 
-} from "firebase/auth";
-import { auth, db } from "../firebase";
-import { doc, setDoc } from "firebase/firestore";
+import api from '../services/api'; // Adicionado aqui!
 
 const Login = () => {
   const navigate = useNavigate();
@@ -29,30 +24,31 @@ const Login = () => {
     e.preventDefault();
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        // LOGIN VIA MYSQL
+        const response = await api.post('/auth/login', { email, senha: password });
+        
+        // Salva os dados do usuário logado no navegador para sabermos que ele está autenticado
+        localStorage.setItem('@ong:user', JSON.stringify(response.data));
+        
         triggerNotify("Login realizado! Entrando...", "success");
-        // Navega para o Dashboard Administrativo
         setTimeout(() => navigate('/admin'), 1500);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Criando o perfil da ONG no banco de dados
-        await setDoc(doc(db, "ongs", userCredential.user.uid), {
-          email: email,
-          tipoPerfil: 'admin',
-          criadoEm: new Date()
-        });
+        // CADASTRO VIA MYSQL
+        await api.post('/auth/register', { email, senha: password });
 
         triggerNotify("ONG Cadastrada com Sucesso!", "success");
         setIsLogin(true);
       }
     } catch (err) {
-      console.error(err.code);
+      console.error(err);
+      
+      // Captura o código de erro que enviamos do back-end
+      const errorCode = err.response?.data?.code;
       let msg = "Erro ao processar sua solicitação.";
-      if (err.code === 'auth/weak-password') msg = "A senha deve ter no mínimo 6 caracteres.";
-      else if (err.code === 'auth/email-already-in-use') msg = "Este e-mail já está em uso.";
-      else if (err.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
-      else if (err.code === 'auth/user-not-found') msg = "E-mail não cadastrado.";
+      
+      if (password.length < 6) msg = "A senha deve ter no mínimo 6 caracteres.";
+      else if (errorCode === 'auth/email-already-in-use') msg = "Este e-mail já está em uso.";
+      else if (errorCode === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
       
       triggerNotify(msg, "error");
     }

@@ -183,6 +183,50 @@ app.delete('/api/admin/solicitacoes/:id', (req, res) => {
   });
 });
 
+// 1. Rota para CADASTRO de uma nova ONG
+app.post('/api/auth/register', (req, res) => {
+  const { email, senha } = req.body;
+
+  // Verifica se o usuário já existe
+  const checkQuery = 'SELECT * FROM usuarios WHERE email = ?';
+  db.query(checkQuery, [email], (err, results) => {
+    if (err) return res.status(500).json({ erro: "Erro ao verificar usuário" });
+    if (results.length > 0) {
+      return res.status(400).json({ code: 'auth/email-already-in-use' });
+    }
+
+    // Insere o novo usuário
+    const insertQuery = 'INSERT INTO usuarios (email, senha) VALUES (?, ?)';
+    db.query(insertQuery, [email, senha], (err, result) => {
+      if (err) return res.status(500).json({ erro: "Erro ao cadastrar usuário" });
+      res.status(201).json({ mensagem: "ONG cadastrada com sucesso!" });
+    });
+  });
+});
+
+// 2. Rota para LOGIN da ONG
+app.post('/api/auth/login', (req, res) => {
+  const { email, senha } = req.body;
+
+  const query = 'SELECT * FROM usuarios WHERE email = ? AND senha = ?';
+  db.query(query, [email, senha], (err, results) => {
+    if (err) return res.status(500).json({ erro: "Erro no servidor" });
+    
+    if (results.length === 0) {
+      // Se não achar, pode ser e-mail inexistente ou senha errada
+      return res.status(400).json({ code: 'auth/invalid-credential' });
+    }
+
+    // Login com sucesso (retorna os dados básicos do perfil)
+    const usuario = results[0];
+    res.json({
+      id: usuario.id,
+      email: usuario.email,
+      tipoPerfil: usuario.tipoPerfil
+    });
+  });
+});
+
 // 🏃‍♂️ 3. Ligando o Servidor Node
 const PORT = 3001; 
 app.listen(PORT, () => {
