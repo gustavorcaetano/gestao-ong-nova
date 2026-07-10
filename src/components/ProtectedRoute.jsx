@@ -1,15 +1,17 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { auth } from '../firebase';
-import { useAuthState } from 'react-firebase-hooks/auth'; // Instale: npm install react-firebase-hooks
 
 const ProtectedRoute = ({ children }) => {
-  const [user, loading] = useAuthState(auth);
+  // Busca os dados do usuário guardados pelo login do MySQL no localStorage
+  const usuarioLogado = localStorage.getItem('@ong:user');
 
-  if (loading) return <div className="text-white">Carregando...</div>;
-  if (!user) return <Navigate to="/login" />; // Expulsa se não estiver logado
+  // Se o usuário existir (significa que fez login com sucesso no MySQL), libera o painel
+  if (usuarioLogado) {
+    return children;
+  }
 
-  return children;
+  // Se não existir, barra o acesso e manda de volta para a tela de login
+  return <Navigate to="/login" replace />;
 };
 
-export default ProtectedRoute;  
+export default ProtectedRoute;

@@ -185,7 +185,7 @@ app.delete('/api/admin/solicitacoes/:id', (req, res) => {
 
 // 1. Rota para CADASTRO de uma nova ONG
 app.post('/api/auth/register', (req, res) => {
-  const { email, senha } = req.body;
+  const { email, senha } = req.body; 
 
   // Verifica se o usuário já existe
   const checkQuery = 'SELECT * FROM usuarios WHERE email = ?';
@@ -224,6 +224,40 @@ app.post('/api/auth/login', (req, res) => {
       email: usuario.email,
       tipoPerfil: usuario.tipoPerfil
     });
+  });
+});
+
+// 1. Rota pública para BUSCAR cadastro da família pelo Nome Completo
+app.get('/api/public/beneficiario/buscar', (req, res) => {
+  const { nome } = req.query;
+
+  const query = 'SELECT * FROM familias WHERE nome = ?';
+  db.query(query, [nome], (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar família no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao consultar o banco de dados." });
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).json({ mensagem: "Cadastro não encontrado." });
+    }
+
+    // Retorna os dados da primeira família encontrada
+    res.json(results[0]);
+  });
+});
+
+// 2. Rota pública para ENVIAR uma nova solicitação/pedido
+app.post('/api/public/beneficiario/solicitacao', (req, res) => {
+  const { nomeFamilia, mensagem } = req.body;
+
+  const query = 'INSERT INTO solicitacoes (nomeFamilia, mensagem) VALUES (?, ?)';
+  db.query(query, [nomeFamilia, mensagem], (err, result) => {
+    if (err) {
+      console.error("Erro ao criar solicitação no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao enviar a solicitação." });
+    }
+    res.status(201).json({ mensagem: "Solicitação enviada com sucesso!" });
   });
 });
 

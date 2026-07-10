@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Card, Row, Col, Button, Form, Modal, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../firebase';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import api from '../services/api'; // Adicionado o Axios
 
 const AreaBeneficiario = () => {
   const navigate = useNavigate();
@@ -12,42 +11,42 @@ const AreaBeneficiario = () => {
   const [loading, setLoading] = useState(false);
   const [solicitacao, setSolicitacao] = useState('');
 
-  // Simulação de busca (Em um sistema real, usaríamos o UID do login)
+  // 1. BUSCA O CADASTRO NO MYSQL VIA AXIOS
   const buscarCadastro = async () => {
     if (!buscaCpf) return;
     setLoading(true);
     try {
-      // Aqui buscamos na coleção 'familias' pelo nome ou CPF (usando nome para o seu exemplo)
-      const q = query(collection(db, "familias"), where("nome", "==", buscaCpf));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        setDados({ ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id });
-      } else {
-        alert("Cadastro não encontrado. Verifique os dados ou procure a ONG.");
-      }
+      const response = await api.get('/public/beneficiario/buscar', {
+        params: { nome: buscaCpf }
+      });
+      setDados(response.data);
     } catch (err) {
       console.error(err);
+      if (err.response && err.response.status === 404) {
+        alert("Cadastro não encontrado. Verifique se o nome está exatamente igual ao cadastrado no sistema.");
+      } else {
+        alert("Erro ao consultar o sistema. Tente novamente.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // 2. ENVIA A SOLICITAÇÃO PARA O MYSQL VIA AXIOS
   const enviarSolicitacao = async (e) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, "solicitacoes"), {
-        familiaId: dados.id,
+      await api.post('/public/beneficiario/solicitacao', {
         nomeFamilia: dados.nome,
-        mensagem: solicitacao,
-        status: "Pendente",
-        data: new Date()
+        mensagem: solicitacao
       });
+      
       alert("Solicitação enviada! Aguarde a aprovação do administrador.");
       setShowModal(false);
       setSolicitacao('');
     } catch (err) {
-      alert("Erro ao enviar.");
+      console.error(err);
+      alert("Erro ao enviar sua solicitação.");
     }
   };
 
