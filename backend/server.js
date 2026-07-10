@@ -261,6 +261,20 @@ app.post('/api/public/beneficiario/solicitacao', (req, res) => {
   });
 });
 
+// Rota pública para REGISTRAR uma nova doação
+app.post('/api/doacoes', (req, res) => {
+  const { nome, email, valor, metodo } = req.body;
+
+  const query = 'INSERT INTO doacoes (nome, email, valor, metodo) VALUES (?, ?, ?, ?)';
+  db.query(query, [nome, email, valor, metodo], (err, result) => {
+    if (err) {
+      console.error("Erro ao registrar doação no MySQL:", err);
+      return res.status(500).json({ erro: "Erro ao processar doação no banco de dados." });
+    }
+    res.status(201).json({ mensagem: "Doação registrada com sucesso!", id: result.insertId });
+  });
+});
+
 // 🏃‍♂️ 3. Ligando o Servidor Node
 const PORT = 3001; 
 app.listen(PORT, () => {

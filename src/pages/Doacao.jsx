@@ -9,9 +9,7 @@ import {
   Modal,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { db } from "../firebase";
-import api from "../services/api";
-import { collection, addDoc } from "firebase/firestore";
+import api from "../services/api"; // Deixe apenas a API!
 
 const Doacao = () => {
   const navigate = useNavigate();
